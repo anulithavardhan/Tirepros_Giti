@@ -1,0 +1,13 @@
+{
+  "name": "tireworks-giti-scraper",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate-input": "node generate-giti-input.mjs",
+    "scrape": "node scrape.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.55.0"
+  }
+}
