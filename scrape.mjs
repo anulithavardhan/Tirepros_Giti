@@ -256,12 +256,12 @@ function sizeKey(value) {
 // 225/65R17
 //
 // LT265/70R17
-// becomes:
-// 265/70R17
+// stays:
+// LT265/70R17
 //
 // 35X12.50R20LT
-// becomes:
-// 35X12.50R20
+// stays:
+// 35X12.50R20LT
 //
 // 225/65R17 XL
 // becomes:
@@ -277,19 +277,29 @@ function cleanSize(value) {
     // remove passenger prefix
     .replace(/^P(?=\d)/, '')
 
-    // remove LT prefix
-    .replace(/^LT(?=\d)/, '')
-
     // remove XL suffix
     .replace(/\s*XL$/, '')
-
-    // remove LT suffix
-    .replace(/LT$/, '')
 
     // remove load range suffixes like E, D, C
     .replace(/\s+[A-Z]$/, '')
 
     .trim();
+}
+
+
+// TireWorks returns regular and LT tires together for the same dimensions.
+// Preserve the LT marker while ignoring presentation-only P, XL, and load
+// range markers so each request receives only its own size variant.
+
+function comparableSize(value) {
+
+  return String(value ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '')
+    .replace(/^P(?=\d)/, '')
+    .replace(/XL$/, '')
+    .replace(/(R\d{2}(?:\.5)?)[CDEFG]$/, '$1');
 }
 
 
@@ -990,7 +1000,9 @@ try {
         cards.filter(
           card =>
             productKey(card.product) ===
-            productKey(wanted.product)
+            productKey(wanted.product) &&
+            comparableSize(card.size) ===
+            comparableSize(wanted.rawSize)
         );
 
 
