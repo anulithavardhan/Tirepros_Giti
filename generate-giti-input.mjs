@@ -43,5 +43,6 @@ for (const [product, productSizes] of groups) {
   for (const size of productSizes) lines.push(`${product}\t${size}`);
 }
 fs.writeFileSync('input.tsv', `${lines.join('\r\n')}\r\n`, 'utf8');
-fs.writeFileSync('giti-map.csv', 'Brand+Product,Rawsize,MAP\r\n', 'utf8');
+// Never overwrite the curated MAP price reference file.
+// giti-map.csv must be maintained separately from generated requests.
 console.log(`Wrote ${lines.length - 1} product-size requests.`);
