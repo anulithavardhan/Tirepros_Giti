@@ -239,11 +239,17 @@ function parseCsv(text) {
 // ============================================================
 
 function sizeKey(value) {
-
-  return String(value)
+  return String(value ?? '')
     .trim()
     .toUpperCase()
-    .replace(/\s+/g, '');
+    .replace(/\s+/g, '')
+    .replace(/^P(?=\d)/, '')
+    .replace(/XL$/, '')
+    .replace(/12\.5(?=R)/g, '12.50');
+}
+
+function mapProductKey(value) {
+  return productKey(value).replace(/^giti(?=xcursion(?:at|xt)$)/, '');
 }
 
 
@@ -342,7 +348,7 @@ function loadMap(text) {
 
     records.map(row => [
 
-      `${productKey(row[productIndex])}|${sizeKey(row[sizeIndex])}`,
+      `${mapProductKey(row[productIndex])}|${sizeKey(row[sizeIndex])}`,
 
       row[mapIndex]?.trim() || ''
 
@@ -485,6 +491,19 @@ const mapValues =
       'utf8'
     )
   );
+
+if (mapValues.size === 0) {
+  throw new Error('MAP reference has no prices; refusing to produce blank MAP results.');
+}
+
+const uncoveredMapRequests = requested.filter(row =>
+  !mapValues.has(`${mapProductKey(row.product)}|${sizeKey(row.rawSize)}`)
+);
+if (uncoveredMapRequests.length) {
+  console.warn(`MAP reference missing ${uncoveredMapRequests.length} requested product/size pairs; see example entries below:`);
+  console.warn(uncoveredMapRequests.slice(0, 10));
+}
+
 
 
 // ============================================================
@@ -1022,7 +1041,7 @@ try {
 
       const map =
         mapValues.get(
-          `${productKey(wanted.product)}|${sizeKey(wanted.rawSize)}`
+          `${mapProductKey(wanted.product)}|${sizeKey(wanted.rawSize)}`
         )
         ||
         '';
