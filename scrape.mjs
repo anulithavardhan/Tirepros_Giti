@@ -238,14 +238,30 @@ function parseCsv(text) {
 // SIZE FUNCTIONS
 // ============================================================
 
+// Flotation sizes may be represented by Tireworks as 35/12.5R17,
+// 35X12.50R17LT, or 35x12.50R17. Those all denote the same
+// flotation dimensions. Metric LT sizes keep their LT prefix.
+function flotationSizeKey(value) {
+  const raw = String(value ?? '').trim().toUpperCase()
+    .replace(/\s+/g, '')
+    .replace(/XL$/, '');
+  const match = raw.match(/^(\d{2}(?:\.\d+)?)\s*[X/]\s*(\d{1,2}(?:\.\d+)?)R(\d{2}(?:\.5)?)(?:LT)?$/);
+  if (!match) return null;
+  const diameter = Number(match[1]);
+  const width = Number(match[2]);
+  const rim = Number(match[3]);
+  return `${diameter}X${width.toFixed(2)}R${rim}`;
+}
+
 function sizeKey(value) {
+  const flotation = flotationSizeKey(value);
+  if (flotation) return flotation;
   return String(value ?? '')
     .trim()
     .toUpperCase()
     .replace(/\s+/g, '')
     .replace(/^P(?=\d)/, '')
-    .replace(/XL$/, '')
-    .replace(/12\.5(?=R)/g, '12.50');
+    .replace(/XL$/, '');
 }
 
 function mapProductKey(value) {
@@ -298,7 +314,8 @@ function cleanSize(value) {
 // range markers so each request receives only its own size variant.
 
 function comparableSize(value) {
-
+  const flotation = flotationSizeKey(value);
+  if (flotation) return flotation;
   return String(value ?? '')
     .trim()
     .toUpperCase()
@@ -308,6 +325,11 @@ function comparableSize(value) {
     .replace(/(R\d{2}(?:\.5)?)[CDEFG]$/, '$1');
 }
 
+// Tireworks may name the model GitiXcursion XT while input.tsv uses
+// XCURSION XT. Normalize the brand prefix only for this family.
+function comparableProduct(value) {
+  return productKey(value).replace(/^giti(?=xcursion(?:at|xt)$)/, '');
+}
 
 // ============================================================
 // LOAD MAP FILE
@@ -1018,14 +1040,21 @@ try {
       const matches =
         cards.filter(
           card =>
-            productKey(card.product) ===
-            productKey(wanted.product) &&
+            comparableProduct(card.product) ===
+            comparableProduct(wanted.product) &&
             comparableSize(card.size) ===
             comparableSize(wanted.rawSize)
         );
 
 
       if (!matches.length) {
+        const sameModel = cards.filter(card =>
+          comparableProduct(card.product) === comparableProduct(wanted.product)
+        );
+        const sampleSizes = [...new Set(sameModel.map(card => card.size))]
+          .slice(0, 8).join(' | ');
+        console.warn(`  No match: ${wanted.product} / ${wanted.rawSize}; ` +
+          `model cards=${sameModel.length}; available sizes=${sampleSizes || 'none'}`);
 
         missing.push({
           ...wanted,
